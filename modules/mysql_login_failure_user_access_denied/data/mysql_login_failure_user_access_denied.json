@@ -1,0 +1,150 @@
+{
+  "name": "mysql_login_failure_user_access_denied",
+  "description": "This incident type occurs when a user is unable to log in to a MySQL server due to an \"access denied\" error. This error typically indicates that there is an issue with the user's credentials or permissions, preventing them from accessing the server. This can be caused by a variety of factors, such as incorrect login credentials, expired passwords, or insufficient permissions for the user account. Resolving this issue typically involves troubleshooting the user's login details and ensuring that they have the necessary permissions to access the server.",
+  "params": [
+    {
+      "name": "MYSQL_POD_NAME",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_ADMIN",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_HOST",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_ADMIN_PASSWORD",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_USER",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_USER_PASSWORD",
+      "value": ""
+    },
+    {
+      "name": "MYSQL_SERVER_IP_ADDRESS",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## \"MySQL Login Failure - User Access Denied\"\nThis incident type occurs when a user is unable to log in to a MySQL server due to an \"access denied\" error. This error typically indicates that there is an issue with the user's credentials or permissions, preventing them from accessing the server. This can be caused by a variety of factors, such as incorrect login credentials, expired passwords, or insufficient permissions for the user account. Resolving this issue typically involves troubleshooting the user's login details and ensuring that they have the necessary permissions to access the server."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the status of the MySQL pod(s) in the cluster"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl get pods -l app=mysql`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Verify that the MySQL server is running and accessible from within the cluster"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE | `mysql -u ${MYSQL_USER} -p${MYSQL_USER_PASSWORD} -e \"SELECT 1;\"`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the logs of the MySQL pod(s) for any error messages related to user access"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl logs ${MYSQL_POD_NAME} | grep \"access denied\"`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Verify that the MySQL service account has sufficient permissions to access the server"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE | `mysql -u ${MYSQL_USER} -p${MYSQL_USER_PASSWORD} -e \"SHOW GRANTS FOR '${MYSQL_USER}'@'%';\"`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check MySQL user for expired password."
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE | `mysql -u ${MYSQL_ADMIN} -p${MYSQL_ADMIN_PASSWORD} -e \"SELECT Password_expired FROM mysql.user WHERE User='${MYSQL_USER}';\"`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check connectivity from the client to the MySQL server."
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ping ${MYSQL_SERVER_IP_ADDRESS}`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the user's login credentials to ensure that they are correct and have not been changed. If necessary, reset the user's password to ensure that they are using the correct login details."
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_pass_reset_script($MYSQL_ADMIN, $MYSQL_HOST, $MYSQL_ADMIN_PASSWORD, $MYSQL_USER, $MYSQL_USER_PASSWORD)"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## If necessary, grant additional permissions to the user to ensure that they have permissions to access the MySQL server."
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | random=1 | limit=1 | invoke_script_grant_mysql_permissions($MYSQL_POD_NAME, $MYSQL_ADMIN, $MYSQL_ADMIN_PASSWORD, $MYSQL_USER)"
+    }
+  ]
+}
